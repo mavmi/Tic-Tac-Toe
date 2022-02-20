@@ -1,8 +1,5 @@
 package com.company;
 
-import javafx.scene.control.Cell;
-import javafx.scene.control.Tab;
-
 import java.util.Scanner;
 
 class BadInputException extends Exception{
@@ -82,9 +79,21 @@ class TikTacToe{
             FIELD[line][column] = player;
             filled_cells++;
             printField();
-            System.out.println(getTableState());
+            printTableState(getTableState());
 
             return;
+        }
+    }
+
+    private void printTableState(TableState tableState){
+        if (tableState == TableState.DRAW){
+            System.out.println("Draw");
+        } else if (tableState == TableState.NOT_FINISHED){
+            System.out.println("Game not finished");
+        } else if (tableState == TableState.X_WINS){
+            System.out.println("X wins");
+        } else if (tableState == TableState.O_WINS){
+            System.out.println("O wins");
         }
     }
 
