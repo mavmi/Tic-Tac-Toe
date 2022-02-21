@@ -34,19 +34,19 @@ enum TableState{
 
 enum Players{
     PLAYER,
-    AI_EASY
+    AI_EASY,
+    AI_MEDIUM
 }
 
 class TikTacToe{
     final int width = 3;
 
     private int filled_cells;
+    private int player_num;
     private char[][] FIELD;
-    private boolean playerOneMove;
     private Players[] players;
 
     public TikTacToe() {
-        playerOneMove = true;
         players = new Players[2];
 
         initEmptyField();
@@ -61,12 +61,18 @@ class TikTacToe{
             try {
                 if (argv[0].equals("start") && argv.length == 3) {
                     for (int i = 1; i < 3; i++){
-                        if (argv[i].equals("user")){
-                            players[i - 1] = Players.PLAYER;
-                        } else if (argv[i].equals("easy")){
-                            players[i - 1] = Players.AI_EASY;
-                        } else {
-                            throw new BadInputException("Bad parameters!");
+                        switch (argv[i]) {
+                            case "user":
+                                players[i - 1] = Players.PLAYER;
+                                break;
+                            case "easy":
+                                players[i - 1] = Players.AI_EASY;
+                                break;
+                            case "medium":
+                                players[i - 1] = Players.AI_MEDIUM;
+                                break;
+                            default:
+                                throw new BadInputException("Bad parameters!");
                         }
                     }
                 } else if (argv[0].equals("exit") && argv.length == 1) {
@@ -84,12 +90,16 @@ class TikTacToe{
     public void start() throws GameFinishedException{
         printField();
 
-        int player_num = 0;
+        player_num = 0;
         while (true){
             if (players[player_num] == Players.PLAYER){
                 makeMove();
             } else if (players[player_num] == Players.AI_EASY){
+                System.out.println("Making move level \"easy\"");
                 gameModeEasy();
+            } else if (players[player_num] == Players.AI_MEDIUM){
+                System.out.println("Making move level \"medium\"");
+                gameModeMedium();
             }
 
             player_num = (player_num == 0) ? 1 : 0;
@@ -110,16 +120,73 @@ class TikTacToe{
     }
 
     private void gameModeEasy() throws GameFinishedException{
-        System.out.println("Making move level \"easy\"");
         Random random = new Random();
 
         while (true){
-            if (makeMove(new String[]{
-                    Integer.toString(random.nextInt(3) + 1),
-                    Integer.toString(random.nextInt(3) + 1)}) == 0) {
+            if (makeMove(random.nextInt(3) + 1,random.nextInt(3) + 1) == 0) {
                 break;
             }
         }
+    }
+
+    private void gameModeMedium() throws GameFinishedException{
+        char[] chars = new char[]{
+            getPlayerChar(),
+            getEnemyChar()
+        };
+        for (int I = 0; I < chars.length; I++){
+            for (int i = 0; i < width; i++){
+                int[] positions = new int[]{0, 1, 2};
+                for (int j = 0; j < 3; j++){
+                    if (FIELD[i][positions[0]] == FIELD[i][positions[1]] &&
+                            FIELD[i][positions[0]] == chars[I] && FIELD[i][positions[2]] == Cells.EMPTY_OUT) {
+                        makeMove(i + 1,positions[2] + 1);
+                        return;
+                    }
+                    if (FIELD[positions[0]][i] == FIELD[positions[1]][i] &&
+                            FIELD[positions[0]][i] == chars[I] && FIELD[positions[2]][i] == Cells.EMPTY_OUT) {
+                        makeMove(positions[2] + 1, i + 1);
+                        return;
+                    }
+
+                    int tmp = positions[2];
+                    positions[2] = positions[1];
+                    positions[1] = positions[0];
+                    positions[0] = tmp;
+                }
+            }
+
+            int[][][] positions = new int[][][]{
+                {
+                    {0, 0},
+                    {1, 1},
+                    {2, 2}
+                },
+                {
+                    {0, 2},
+                    {1, 1},
+                    {2, 0}
+                }
+            };
+            for (int L = 0; L < positions.length; L++) {
+                for (int i = 0; i < 3; i++) {
+                    if (FIELD[positions[L][0][0]][positions[L][0][1]] == FIELD[positions[L][1][0]][positions[L][1][1]] &&
+                            FIELD[positions[L][0][0]][positions[L][0][1]] == chars[I] &&
+                            FIELD[positions[L][2][0]][positions[L][2][1]] == Cells.EMPTY_OUT) {
+                        makeMove(positions[L][2][0] + 1, positions[L][2][1] + 1);
+                        return;
+                    }
+
+                    int[] tmp0 = positions[L][0];
+                    int[] tmp1 = positions[L][1];
+                    int[] tmp2 = positions[L][2];
+                    positions[L][0] = tmp1;
+                    positions[L][1] = tmp2;
+                    positions[L][2] = tmp0;
+                }
+            }
+        }
+        gameModeEasy();
     }
 
     private void makeMove() throws GameFinishedException{
@@ -133,7 +200,6 @@ class TikTacToe{
 
     private int makeMove(String[] strings) throws GameFinishedException{
         int line, column;
-        int player_num = (playerOneMove) ? 0 : 1;
 
         try {
             line = Integer.parseInt(strings[0]);
@@ -145,6 +211,10 @@ class TikTacToe{
             return 1;
         }
 
+        return makeMove(line, column);
+    }
+
+    private int makeMove(int line, int column) throws GameFinishedException{
         if (line < 1 || line > 3 ||
                 column < 1 || column > 3){
             if (players[player_num] == Players.PLAYER) {
@@ -161,9 +231,8 @@ class TikTacToe{
             return 1;
         }
 
-        FIELD[line][column] = (playerOneMove) ? Cells.X : Cells.O;
+        FIELD[line][column] = getPlayerChar();
         filled_cells++;
-        playerOneMove = !playerOneMove;
         printField();
 
         TableState tableState = getTableState();
@@ -172,6 +241,14 @@ class TikTacToe{
         }
 
         return 0;
+    }
+
+    private char getPlayerChar(){
+        return (player_num == 0) ? Cells.X : Cells.O;
+    }
+
+    private char getEnemyChar(){
+        return (player_num == 0) ? Cells.O : Cells.X;
     }
 
     private String tableStateToString(TableState tableState){
@@ -270,4 +347,3 @@ public class Main {
         }
     }
 }
-
