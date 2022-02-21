@@ -32,20 +32,68 @@ enum TableState{
     O_WINS
 }
 
+enum Players{
+    PLAYER,
+    AI_EASY
+}
+
 class TikTacToe{
     final int width = 3;
 
     private int filled_cells;
-    private char player;
-    private char computer;
     private char[][] FIELD;
-    private boolean player_move;
+    private boolean playerOneMove;
+    private Players[] players;
 
     public TikTacToe() {
-        player_move = true;
+        playerOneMove = true;
+        players = new Players[2];
 
         initEmptyField();
+    }
+
+    public void parseCommand(){
+        Scanner scanner = new Scanner(System.in);
+        while (true) {
+            System.out.print("Input command: ");
+
+            String[] argv = scanner.nextLine().split(" ");
+            try {
+                if (argv[0].equals("start") && argv.length == 3) {
+                    for (int i = 1; i < 3; i++){
+                        if (argv[i].equals("user")){
+                            players[i - 1] = Players.PLAYER;
+                        } else if (argv[i].equals("easy")){
+                            players[i - 1] = Players.AI_EASY;
+                        } else {
+                            throw new BadInputException("Bad parameters!");
+                        }
+                    }
+                } else if (argv[0].equals("exit") && argv.length == 1) {
+                    System.exit(0);
+                } else {
+                    throw new BadInputException("Bad parameters!");
+                }
+                break;
+            } catch (BadInputException e){
+                System.out.println(e.getMessage());
+            }
+        }
+    }
+
+    public void start() throws GameFinishedException{
         printField();
+
+        int player_num = 0;
+        while (true){
+            if (players[player_num] == Players.PLAYER){
+                makeMove();
+            } else if (players[player_num] == Players.AI_EASY){
+                gameModeEasy();
+            }
+
+            player_num = (player_num == 0) ? 1 : 0;
+        }
     }
 
     public void printField(){
@@ -61,7 +109,20 @@ class TikTacToe{
         System.out.println("---------");
     }
 
-    public void makeMove() throws GameFinishedException{
+    private void gameModeEasy() throws GameFinishedException{
+        System.out.println("Making move level \"easy\"");
+        Random random = new Random();
+
+        while (true){
+            if (makeMove(new String[]{
+                    Integer.toString(random.nextInt(3) + 1),
+                    Integer.toString(random.nextInt(3) + 1)}) == 0) {
+                break;
+            }
+        }
+    }
+
+    private void makeMove() throws GameFinishedException{
         while (true) {
             System.out.print("Enter the coordinates: ");
             if (makeMove(new Scanner(System.in).nextLine().split(" ")) == 0){
@@ -70,26 +131,15 @@ class TikTacToe{
         }
     }
 
-    public void gameModeEasy() throws GameFinishedException{
-        System.out.println("Making move level \"easy\"");
-        Random random = new Random();
-
-        while (true){
-             if (makeMove(new String[]{
-                Integer.toString(random.nextInt(3) + 1),
-                Integer.toString(random.nextInt(3) + 1)}) == 0) {
-                break;
-             }
-        }
-    }
-
     private int makeMove(String[] strings) throws GameFinishedException{
         int line, column;
+        int player_num = (playerOneMove) ? 0 : 1;
+
         try {
             line = Integer.parseInt(strings[0]);
             column = Integer.parseInt(strings[1]);
         } catch (Exception e) {
-            if (player_move) {
+            if (players[player_num] == Players.PLAYER) {
                 System.out.println("You should enter numbers!");
             }
             return 1;
@@ -97,7 +147,7 @@ class TikTacToe{
 
         if (line < 1 || line > 3 ||
                 column < 1 || column > 3){
-            if (player_move) {
+            if (players[player_num] == Players.PLAYER) {
                 System.out.println("Coordinates should be from 1 to 3!");
             }
             return 1;
@@ -105,15 +155,15 @@ class TikTacToe{
 
         line--; column--;
         if (FIELD[line][column] == Cells.O || FIELD[line][column] == Cells.X){
-            if (player_move) {
+            if (players[player_num] == Players.PLAYER) {
                 System.out.println("This cell is occupied! Choose another one!");
             }
             return 1;
         }
 
-        FIELD[line][column] = (player_move) ? player : computer;
+        FIELD[line][column] = (playerOneMove) ? Cells.X : Cells.O;
         filled_cells++;
-        player_move = !player_move;
+        playerOneMove = !playerOneMove;
         printField();
 
         TableState tableState = getTableState();
@@ -195,14 +245,6 @@ class TikTacToe{
                 count_x++;
             }
         }
-
-        if (count_o < count_x){
-            player = Cells.O;
-            computer = Cells.X;
-        } else {
-            player = Cells.X;
-            computer = Cells.O;
-        }
     }
 
     private void initEmptyField(){
@@ -214,9 +256,6 @@ class TikTacToe{
                 FIELD[i][j] = Cells.EMPTY_OUT;
             }
         }
-
-        player = Cells.X;
-        computer = Cells.O;
     }
 }
 
@@ -224,11 +263,8 @@ public class Main {
     public static void main(String[] args) {
         try{
             TikTacToe tikTacToe = new TikTacToe();
-
-            while (true) {
-                tikTacToe.makeMove();
-                tikTacToe.gameModeEasy();
-            }
+            tikTacToe.parseCommand();
+            tikTacToe.start();
         } catch (GameFinishedException e){
             System.out.println(e.getMessage());
         }
