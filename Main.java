@@ -1,6 +1,6 @@
 package com.company;
 
-import javax.swing.plaf.synth.SynthEditorPaneUI;
+import java.util.Random;
 import java.util.Scanner;
 
 class BadInputException extends Exception{
@@ -9,6 +9,12 @@ class BadInputException extends Exception{
     }
     public BadInputException(String msg){
         super(msg);
+    }
+}
+
+class GameFinishedException extends Exception{
+    public GameFinishedException(String state){
+        super(state);
     }
 }
 
@@ -33,9 +39,13 @@ class TikTacToe{
     private char player;
     private char computer;
     private char[][] FIELD;
+    private boolean player_move;
 
-    public TikTacToe() throws BadInputException{
-        parseField();
+    public TikTacToe() {
+        player_move = true;
+
+        initEmptyField();
+        printField();
     }
 
     public void printField(){
@@ -51,51 +61,80 @@ class TikTacToe{
         System.out.println("---------");
     }
 
-    public void makeMove(){
+    public void makeMove() throws GameFinishedException{
         while (true) {
             System.out.print("Enter the coordinates: ");
-            String[] strings = new Scanner(System.in).nextLine().split(" ");
-
-            int line, column;
-            try {
-                line = Integer.parseInt(strings[0]);
-                column = Integer.parseInt(strings[1]);
-            } catch (Exception e) {
-                System.out.println("You should enter numbers!");
-                continue;
+            if (makeMove(new Scanner(System.in).nextLine().split(" ")) == 0){
+                break;
             }
-
-            if (line < 1 || line > 3 ||
-                    column < 1 || column > 3){
-                System.out.println("Coordinates should be from 1 to 3!");
-                continue;
-            }
-
-            line--; column--;
-            if (FIELD[line][column] == Cells.O || FIELD[line][column] == Cells.X){
-                System.out.println("This cell is occupied! Choose another one!");
-                continue;
-            }
-
-            FIELD[line][column] = player;
-            filled_cells++;
-            printField();
-            printTableState(getTableState());
-
-            return;
         }
     }
 
-    private void printTableState(TableState tableState){
-        if (tableState == TableState.DRAW){
-            System.out.println("Draw");
-        } else if (tableState == TableState.NOT_FINISHED){
-            System.out.println("Game not finished");
-        } else if (tableState == TableState.X_WINS){
-            System.out.println("X wins");
-        } else if (tableState == TableState.O_WINS){
-            System.out.println("O wins");
+    public void gameModeEasy() throws GameFinishedException{
+        System.out.println("Making move level \"easy\"");
+        Random random = new Random();
+
+        while (true){
+             if (makeMove(new String[]{
+                Integer.toString(random.nextInt(3) + 1),
+                Integer.toString(random.nextInt(3) + 1)}) == 0) {
+                break;
+             }
         }
+    }
+
+    private int makeMove(String[] strings) throws GameFinishedException{
+        int line, column;
+        try {
+            line = Integer.parseInt(strings[0]);
+            column = Integer.parseInt(strings[1]);
+        } catch (Exception e) {
+            if (player_move) {
+                System.out.println("You should enter numbers!");
+            }
+            return 1;
+        }
+
+        if (line < 1 || line > 3 ||
+                column < 1 || column > 3){
+            if (player_move) {
+                System.out.println("Coordinates should be from 1 to 3!");
+            }
+            return 1;
+        }
+
+        line--; column--;
+        if (FIELD[line][column] == Cells.O || FIELD[line][column] == Cells.X){
+            if (player_move) {
+                System.out.println("This cell is occupied! Choose another one!");
+            }
+            return 1;
+        }
+
+        FIELD[line][column] = (player_move) ? player : computer;
+        filled_cells++;
+        player_move = !player_move;
+        printField();
+
+        TableState tableState = getTableState();
+        if (tableState != TableState.NOT_FINISHED){
+            throw new GameFinishedException(tableStateToString(tableState));
+        }
+
+        return 0;
+    }
+
+    private String tableStateToString(TableState tableState){
+        if (tableState == TableState.DRAW){
+            return "Draw";
+        } else if (tableState == TableState.NOT_FINISHED){
+            return "Game not finished";
+        } else if (tableState == TableState.X_WINS){
+            return "X wins";
+        } else if (tableState == TableState.O_WINS){
+            return "O wins";
+        }
+        return null;
     }
 
     private TableState getTableState(){
@@ -165,16 +204,34 @@ class TikTacToe{
             computer = Cells.O;
         }
     }
+
+    private void initEmptyField(){
+        filled_cells = 0;
+        FIELD = new char[3][3];
+
+        for (int i = 0; i < width; i++){
+            for (int j = 0; j < width; j++){
+                FIELD[i][j] = Cells.EMPTY_OUT;
+            }
+        }
+
+        player = Cells.X;
+        computer = Cells.O;
+    }
 }
 
 public class Main {
     public static void main(String[] args) {
-	    try{
+        try{
             TikTacToe tikTacToe = new TikTacToe();
-            tikTacToe.printField();
-            tikTacToe.makeMove();
-        } catch (BadInputException e){
+
+            while (true) {
+                tikTacToe.makeMove();
+                tikTacToe.gameModeEasy();
+            }
+        } catch (GameFinishedException e){
             System.out.println(e.getMessage());
         }
     }
 }
+
