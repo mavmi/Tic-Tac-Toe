@@ -1,5 +1,6 @@
 package com.company;
 
+import javax.swing.plaf.synth.SynthEditorPaneUI;
 import java.util.Scanner;
 
 class BadInputException extends Exception{
@@ -99,21 +100,28 @@ class TikTacToe{
 
     private TableState getTableState(){
         for (int i = 0; i < width; i++){
-            if (FIELD[i][0] == FIELD[i][1] && FIELD[i][0] == FIELD[i][2]){
+            if (FIELD[i][0] != Cells.EMPTY_OUT &&
+                    FIELD[i][0] == FIELD[i][1] && FIELD[i][0] == FIELD[i][2]){
                 return getWinner(FIELD[i][0]);
             }
-            if (FIELD[0][i] == FIELD[1][i] && FIELD[0][i] == FIELD[2][i]){
+            if (FIELD[0][i] != Cells.EMPTY_OUT &&
+                    FIELD[0][i] == FIELD[1][i] && FIELD[0][i] == FIELD[2][i]){
                 return getWinner(FIELD[0][i]);
             }
         }
-        if (FIELD[0][0] == FIELD[1][1] && FIELD[0][0] == FIELD[2][2]){
+        if (FIELD[0][0] != Cells.EMPTY_OUT &&
+                FIELD[0][0] == FIELD[1][1] && FIELD[0][0] == FIELD[2][2]){
             return getWinner(FIELD[0][0]);
         }
-        if (FIELD[2][0] == FIELD[1][1] && FIELD[2][0] == FIELD[0][2]){
+        if (FIELD[2][0] != Cells.EMPTY_OUT &&
+                FIELD[2][0] == FIELD[1][1] && FIELD[2][0] == FIELD[0][2]){
             return getWinner(FIELD[2][0]);
         }
 
-        return (filled_cells == 9) ? TableState.DRAW : TableState.NOT_FINISHED;
+        if (filled_cells == 9){
+            return TableState.DRAW;
+        }
+        return TableState.NOT_FINISHED;
     }
 
     private TableState getWinner(char c){
