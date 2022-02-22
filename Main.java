@@ -1,5 +1,6 @@
 package com.company;
 
+import java.util.ArrayList;
 import java.util.Random;
 import java.util.Scanner;
 
@@ -25,6 +26,18 @@ class Cells{
     public static final char EMPTY_OUT = ' ';
 }
 
+class Minimax{
+    public int x;
+    public int y;
+    public int result;
+
+    public Minimax(int x, int y, int result){
+        this.x = x;
+        this.y = y;
+        this.result = result;
+    }
+}
+
 enum TableState{
     NOT_FINISHED,
     DRAW,
@@ -35,7 +48,8 @@ enum TableState{
 enum Players{
     PLAYER,
     AI_EASY,
-    AI_MEDIUM
+    AI_MEDIUM,
+    AI_HARD
 }
 
 class TikTacToe{
@@ -50,9 +64,32 @@ class TikTacToe{
         players = new Players[2];
 
         initEmptyField();
+        parseCommand();
     }
 
-    public void parseCommand(){
+    public void start() throws GameFinishedException{
+        printField();
+
+        player_num = 0;
+        while (true){
+            if (players[player_num] == Players.PLAYER){
+                makeMove();
+            } else if (players[player_num] == Players.AI_EASY){
+                System.out.println("Making move level \"easy\"");
+                gameModeEasy();
+            } else if (players[player_num] == Players.AI_MEDIUM){
+                System.out.println("Making move level \"medium\"");
+                gameModeMedium();
+            } else if (players[player_num] == Players.AI_HARD){
+                System.out.println("Making move level \"hard\"");
+                gameModeHard();
+            }
+
+            player_num = nextPlayer(player_num);
+        }
+    }
+
+    private void parseCommand(){
         Scanner scanner = new Scanner(System.in);
         while (true) {
             System.out.print("Input command: ");
@@ -71,6 +108,9 @@ class TikTacToe{
                             case "medium":
                                 players[i - 1] = Players.AI_MEDIUM;
                                 break;
+                            case "hard":
+                                players[i - 1] = Players.AI_HARD;
+                                break;
                             default:
                                 throw new BadInputException("Bad parameters!");
                         }
@@ -84,25 +124,6 @@ class TikTacToe{
             } catch (BadInputException e){
                 System.out.println(e.getMessage());
             }
-        }
-    }
-
-    public void start() throws GameFinishedException{
-        printField();
-
-        player_num = 0;
-        while (true){
-            if (players[player_num] == Players.PLAYER){
-                makeMove();
-            } else if (players[player_num] == Players.AI_EASY){
-                System.out.println("Making move level \"easy\"");
-                gameModeEasy();
-            } else if (players[player_num] == Players.AI_MEDIUM){
-                System.out.println("Making move level \"medium\"");
-                gameModeMedium();
-            }
-
-            player_num = (player_num == 0) ? 1 : 0;
         }
     }
 
@@ -189,6 +210,64 @@ class TikTacToe{
         gameModeEasy();
     }
 
+    private void gameModeHard() throws GameFinishedException{
+        ArrayList<Minimax> results = minimax(copyField(), player_num, 0);
+
+        Minimax max = results.get(0);
+        for (Minimax minimax : results){
+            if (minimax.result > max.result){
+                max = minimax;
+            }
+        }
+        makeMove(max.x + 1, max.y + 1);
+    }
+
+    private ArrayList<Minimax> minimax(char[][] field, int playerNum, int depth) {
+        ArrayList<Minimax> results = new ArrayList<>();
+
+        for (int i = 0; i < width; i++){
+            for (int j = 0; j < width; j++){
+                if (field[i][j] == Cells.EMPTY_OUT){
+                    char[][] field_cpy = copyField(field);
+                    field_cpy[i][j] = getPlayerChar(playerNum);
+
+                    TableState tableState = getTableState(field_cpy);
+                    if (tableState == TableState.NOT_FINISHED){
+                        ArrayList<Minimax> return_value = minimax(field_cpy, nextPlayer(playerNum), depth++);
+                        for (Minimax minimax : return_value){
+                            results.add(new Minimax(i, j, minimax.result));
+                        }
+                    } else if (tableState == TableState.DRAW) {
+                        results.add(new Minimax(i, j, -depth));
+                    } else if (tableState == TableState.X_WINS && player_num == 0 ||
+                                tableState == TableState.O_WINS && player_num == 1){
+                        results.add(new Minimax(i, j, 10 - depth));
+                    } else {
+                        results.add(new Minimax(i, j, -10 - depth));
+                    }
+                }
+            }
+        }
+
+        return results;
+    }
+
+    private char[][] copyField(){
+        return copyField(FIELD);
+    }
+
+    private char[][] copyField(char[][] field){
+        char[][] fieldCpy = new char[width][width];
+
+        for (int i = 0; i < width; i++){
+            for (int j = 0; j < width; j++){
+                fieldCpy[i][j] = field[i][j];
+            }
+        }
+
+        return fieldCpy;
+    }
+
     private void makeMove() throws GameFinishedException{
         while (true) {
             System.out.print("Enter the coordinates: ");
@@ -244,11 +323,19 @@ class TikTacToe{
     }
 
     private char getPlayerChar(){
-        return (player_num == 0) ? Cells.X : Cells.O;
+        return getPlayerChar(player_num);
+    }
+
+    private char getPlayerChar(int playerNum){
+        return (playerNum == 0) ? Cells.X : Cells.O;
     }
 
     private char getEnemyChar(){
-        return (player_num == 0) ? Cells.O : Cells.X;
+        return getEnemyChar(player_num);
+    }
+
+    private char getEnemyChar(int playerNum){
+        return (playerNum == 0) ? Cells.O : Cells.X;
     }
 
     private String tableStateToString(TableState tableState){
@@ -265,29 +352,37 @@ class TikTacToe{
     }
 
     private TableState getTableState(){
+        return getTableState(FIELD);
+    }
+
+    private TableState getTableState(char[][] field){
         for (int i = 0; i < width; i++){
-            if (FIELD[i][0] != Cells.EMPTY_OUT &&
-                    FIELD[i][0] == FIELD[i][1] && FIELD[i][0] == FIELD[i][2]){
-                return getWinner(FIELD[i][0]);
+            if (field[i][0] != Cells.EMPTY_OUT &&
+                    field[i][0] == field[i][1] && field[i][0] == field[i][2]){
+                return getWinner(field[i][0]);
             }
-            if (FIELD[0][i] != Cells.EMPTY_OUT &&
-                    FIELD[0][i] == FIELD[1][i] && FIELD[0][i] == FIELD[2][i]){
-                return getWinner(FIELD[0][i]);
+            if (field[0][i] != Cells.EMPTY_OUT &&
+                    field[0][i] == field[1][i] && field[0][i] == field[2][i]){
+                return getWinner(field[0][i]);
             }
         }
-        if (FIELD[0][0] != Cells.EMPTY_OUT &&
-                FIELD[0][0] == FIELD[1][1] && FIELD[0][0] == FIELD[2][2]){
-            return getWinner(FIELD[0][0]);
+        if (field[0][0] != Cells.EMPTY_OUT &&
+                field[0][0] == field[1][1] && field[0][0] == field[2][2]){
+            return getWinner(field[0][0]);
         }
-        if (FIELD[2][0] != Cells.EMPTY_OUT &&
-                FIELD[2][0] == FIELD[1][1] && FIELD[2][0] == FIELD[0][2]){
-            return getWinner(FIELD[2][0]);
+        if (field[2][0] != Cells.EMPTY_OUT &&
+                field[2][0] == field[1][1] && field[2][0] == field[0][2]){
+            return getWinner(field[2][0]);
         }
 
         if (filled_cells == 9){
             return TableState.DRAW;
         }
         return TableState.NOT_FINISHED;
+    }
+
+    private int nextPlayer(int playerNum){
+        return (playerNum == 0) ? 1 : 0;
     }
 
     private TableState getWinner(char c){
@@ -340,7 +435,6 @@ public class Main {
     public static void main(String[] args) {
         try{
             TikTacToe tikTacToe = new TikTacToe();
-            tikTacToe.parseCommand();
             tikTacToe.start();
         } catch (GameFinishedException e){
             System.out.println(e.getMessage());
