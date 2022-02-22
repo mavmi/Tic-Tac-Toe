@@ -211,7 +211,7 @@ class TikTacToe{
     }
 
     private void gameModeHard() throws GameFinishedException{
-        ArrayList<Minimax> results = minimax(copyField(), player_num, 0);
+        ArrayList<Minimax> results = minimax(copyField(), player_num);
 
         Minimax max = results.get(0);
         for (Minimax minimax : results){
@@ -222,7 +222,7 @@ class TikTacToe{
         makeMove(max.x + 1, max.y + 1);
     }
 
-    private ArrayList<Minimax> minimax(char[][] field, int playerNum, int depth) {
+    private ArrayList<Minimax> minimax(char[][] field, int playerNum) {
         ArrayList<Minimax> results = new ArrayList<>();
 
         for (int i = 0; i < width; i++){
@@ -233,17 +233,17 @@ class TikTacToe{
 
                     TableState tableState = getTableState(field_cpy);
                     if (tableState == TableState.NOT_FINISHED){
-                        ArrayList<Minimax> return_value = minimax(field_cpy, nextPlayer(playerNum), depth++);
+                        ArrayList<Minimax> return_value = minimax(field_cpy, nextPlayer(playerNum));
                         for (Minimax minimax : return_value){
                             results.add(new Minimax(i, j, minimax.result));
                         }
                     } else if (tableState == TableState.DRAW) {
-                        results.add(new Minimax(i, j, -depth));
+                        results.add(new Minimax(i, j, 0));
                     } else if (tableState == TableState.X_WINS && player_num == 0 ||
                                 tableState == TableState.O_WINS && player_num == 1){
-                        results.add(new Minimax(i, j, 10 - depth));
+                        results.add(new Minimax(i, j, 10));
                     } else {
-                        results.add(new Minimax(i, j, -10 - depth));
+                        results.add(new Minimax(i, j, -10));
                     }
                 }
             }
